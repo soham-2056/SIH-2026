@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emberlens // Multi-Source Satellite Intelligence & Persistence Platform</title>
+  <meta name="description" content="Next-generation multi-satellite thermal intelligence combining ISRO INSAT-3 Series with NASA VIIRS, long-term persistence tracking, and 10-category visual classification system for SIH 2026.">
+  
+  <!-- Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  
+  <!-- Application Stylesheet -->
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <!-- Top Navigation & Telemetry Bar -->
+  <header class="app-header" id="appHeader">
+    <div class="header-left">
+      <div class="brand-badge">
+        <span class="flag-icon">🇮🇳</span>
+        <div class="brand-titles">
+          <h1 class="brand-name">Emberlens <span class="brand-edition">PERSISTENCE & CLASSIFICATION EDITION</span></h1>
+          <p class="brand-subtitle">Multi-Source Satellite Intelligence Platform for India • SIH 2026</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- View Navigation Tabs -->
+    <nav class="main-view-nav" id="mainViewNav">
+      <button class="nav-tab-btn active" data-view="view-radar" id="btnNavRadar">
+        <span class="tab-icon">🛰️</span>
+        <span class="tab-label">GIS Radar</span>
+      </button>
+      <button class="nav-tab-btn" data-view="view-hotspots" id="btnNavHotspots">
+        <span class="tab-icon">📋</span>
+        <span class="tab-label">Hotspot Registry</span>
+      </button>
+      <button class="nav-tab-btn" data-view="view-persistent" id="btnNavPersistent">
+        <span class="tab-icon">🏭</span>
+        <span class="tab-label">Persistent Sources</span>
+      </button>
+      <button class="nav-tab-btn" data-view="view-analytics" id="btnNavAnalytics">
+        <span class="tab-icon">📊</span>
+        <span class="tab-label">Analytics</span>
+      </button>
+      <button class="nav-tab-btn" data-view="view-reports" id="btnNavReports">
+        <span class="tab-icon">📄</span>
+        <span class="tab-label">SIH Reports</span>
+      </button>
+      <button class="nav-tab-btn" data-view="view-alerts" id="btnNavAlerts">
+        <span class="tab-icon">🚨</span>
+        <span class="tab-label">Alerts (<span id="topAlertCount">0</span>)</span>
+      </button>
+    </nav>
+
+    <!-- NRT Telemetry Pill & Mode Switcher -->
+    <div class="header-right">
+      <div class="nrt-telemetry-pill" id="nrtTelemetryPill">
+        <div class="telemetry-item primary">
+          <span class="pulse-dot"></span>
+          <span class="telemetry-label">INSAT NRT</span>
+          <span class="status-badge" id="nrtStatusBadge">CONNECTING...</span>
+        </div>
+        <div class="telemetry-divider"></div>
+        <div class="telemetry-item">
+          <span class="telemetry-sublabel">Last Obs:</span>
+          <span class="telemetry-val" id="lastObsVal">--:-- IST</span>
+        </div>
+        <div class="telemetry-divider"></div>
+        <div class="telemetry-item">
+          <span class="telemetry-sublabel">Data Age:</span>
+          <span class="telemetry-val highlight" id="dataAgeVal">--m</span>
+        </div>
+      </div>
+
+      <div class="mode-switch-wrapper">
+        <button class="mode-btn active" id="btnDemoMode" title="Synthetic calibrated benchmark for SIH demo">DEMO</button>
+        <button class="mode-btn" id="btnLiveMode" title="Direct MOSDAC API Connection (Requires credentials)">LIVE</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mode Alert / Fallback Banner -->
+  <div class="disclaimer-banner demo-banner" id="modeDisclaimerBanner">
+    <span class="disclaimer-icon">⚠️</span>
+    <span class="disclaimer-text" id="disclaimerText">DEMO BENCHMARK DATA — CALIBRATED ISRO MOSDAC & NASA FIRMS OBSERVATIONS</span>
+    <span class="disclaimer-note">Memory Architecture: "We don't just detect hotspots. We remember them."</span>
+  </div>
+
+  <!-- Primary Dashboard KPI Summary Bar -->
+  <section class="kpi-grid" id="kpiGrid">
+    <div class="kpi-card" id="kpiInsatEvents">
+      <div class="kpi-header">
+        <span class="kpi-icon">🛰️</span>
+        <span class="agency-source-pill isro">🇮🇳 ISRO / MOSDAC</span>
+      </div>
+      <div class="kpi-value" id="valInsatEvents">--</div>
+      <div class="kpi-title">INSAT DETECTIONS</div>
+      <div class="kpi-subtext">Geostationary 15-min cadence</div>
+    </div>
+
+    <div class="kpi-card" id="kpiInsatConfirmed">
+      <div class="kpi-header">
+        <span class="kpi-icon">🔥</span>
+        <span class="agency-source-pill verified">CROSS-VERIFIED</span>
+      </div>
+      <div class="kpi-value" id="valInsatConfirmed">--</div>
+      <div class="kpi-title">INSAT-CONFIRMED</div>
+      <div class="kpi-subtext">Corroborated by Geostationary INSAT</div>
+    </div>
+
+    <div class="kpi-card" id="kpiMultiSatellite">
+      <div class="kpi-header">
+        <span class="kpi-icon">🌐</span>
+        <span class="agency-source-pill nasa">🇺🇸 NASA / FIRMS</span>
+      </div>
+      <div class="kpi-value" id="valMultiSatellite">--</div>
+      <div class="kpi-title">MULTI-SATELLITE EVENTS</div>
+      <div class="kpi-subtext">High/Med Agreement (ISRO + NASA)</div>
+    </div>
+
+    <div class="kpi-card" id="kpiPersistentSources">
+      <div class="kpi-header">
+        <span class="kpi-icon">🏭</span>
+        <span class="agency-source-pill persistent">LONG-TERM MEMORY</span>
+      </div>
+      <div class="kpi-value" id="valPersistentSources">--</div>
+      <div class="kpi-title">PERSISTENT SOURCES</div>
+      <div class="kpi-subtext">Chronic industrial thermal locations</div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       VIEW 1: GIS RADAR & MAP (PRIMARY COMMAND CENTER)
+       =================================================================== -->
+  <main class="view-panel active" id="view-radar">
+    <div class="workspace-layout">
+      <!-- Left: Map Container with Legend & Filters -->
+      <div class="map-container-wrapper">
+        <!-- Top Toolbar & Layer Toggles -->
+        <div class="map-toolbar">
+          <div class="toolbar-title">
+            <span class="radar-dot"></span>
+            <span>INDIAN SUBCONTINENT GEOSPATIAL RADAR</span>
+          </div>
+
+          <div class="layer-toggles">
+            <label class="toggle-pill">
+              <input type="checkbox" id="chkInsat3ds" checked>
+              <span class="pill-dot isro-ds"></span> INSAT-3DS (4km)
+            </label>
+            <label class="toggle-pill">
+              <input type="checkbox" id="chkInsat3dr" checked>
+              <span class="pill-dot isro-dr"></span> INSAT-3DR (4km)
+            </label>
+            <label class="toggle-pill">
+              <input type="checkbox" id="chkViirs" checked>
+              <span class="pill-dot viirs"></span> VIIRS Polar (375m)
+            </label>
+            <label class="toggle-pill">
+              <input type="checkbox" id="chkIndustrial" checked>
+              <span class="pill-dot industrial"></span> Facilities
+            </label>
+            <label class="toggle-pill">
+              <input type="checkbox" id="chkFusionLinks" checked>
+              <span class="pill-dot fusion"></span> Fusion Vectors
+            </label>
+          </div>
+        </div>
+
+        <!-- Classification Filter Bar (Section 12 of Prompt) -->
+        <div class="classification-filter-bar" id="classFilterBar">
+          <span class="filter-title">CLASSIFICATION FILTER:</span>
+          <div class="filter-chips-container" id="filterChipsContainer">
+            <!-- Dynamically populated chips with colors -->
+          </div>
+          <button class="btn-clear-filters" id="btnClearFilters">Reset All</button>
+        </div>
+
+        <!-- The Leaflet Map Canvas -->
+        <div id="satelliteMap" class="satellite-map"></div>
+
+        <!-- Floating Collapsible Map Legend (Section 7 of Prompt) -->
+        <div class="map-floating-legend" id="mapLegend">
+          <div class="legend-header" id="legendHeaderToggle">
+            <span class="legend-title">🗺️ MAP LEGEND & DIMENSIONS</span>
+            <button class="legend-toggle-btn" id="btnToggleLegend" title="Collapse / Expand Legend">−</button>
+          </div>
+          <div class="legend-body" id="legendBody">
+            <!-- SECTION 1: CLASSIFICATION -->
+            <div class="legend-section">
+              <div class="legend-section-title">1. CLASSIFICATION (What is it?)</div>
+              <div class="legend-grid" id="legendClassificationGrid">
+                <!-- Dynamically populated from schema -->
+              </div>
+            </div>
+
+            <!-- SECTION 2: RISK -->
+            <div class="legend-section">
+              <div class="legend-section-title">2. RISK SEVERITY (How concerning is it?)</div>
+              <div class="legend-grid" id="legendRiskGrid">
+                <div class="legend-item"><span class="legend-dot" style="background:#22C55E"></span><span>🟢 LOW (0–39)</span></div>
+                <div class="legend-item"><span class="legend-dot" style="background:#EAB308"></span><span>🟡 MEDIUM (40–69)</span></div>
+                <div class="legend-item"><span class="legend-dot" style="background:#F97316"></span><span>🟠 HIGH (70–84)</span></div>
+                <div class="legend-item"><span class="legend-dot" style="background:#DC2626"></span><span>🔴 CRITICAL (85–100)</span></div>
+              </div>
+            </div>
+
+            <!-- SECTION 3: PERSISTENCE -->
+            <div class="legend-section">
+              <div class="legend-section-title">3. PERSISTENCE (How often does it happen?)</div>
+              <div class="legend-grid" id="legendPersistenceGrid">
+                <div class="legend-item"><span class="legend-dot" style="background:#94A3B8"></span><span>⚪ Temporary (1-time)</span></div>
+                <div class="legend-item"><span class="legend-dot" style="background:#3B82F6"></span><span>🔵 Recurring (Repeated)</span></div>
+                <div class="legend-item"><span class="legend-dot" style="background:#A855F7"></span><span>🟣 Persistent (Chronic)</span></div>
+                <div class="legend-item"><span class="legend-dot" style="background:#CBD5E1"></span><span>⚪ Unknown</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hotspot Quick-Card Popup Overlay (Section 9 of Prompt) -->
+        <div class="hotspot-card-overlay hidden" id="hotspotCardOverlay">
+          <div class="hotspot-card-box">
+            <button class="card-close-btn" id="btnCloseCardOverlay">✕</button>
+            <div class="card-classification-badge" id="cardClassBadge">
+              🔴 POSSIBLE INDUSTRIAL THERMAL EVENT
+            </div>
+            <div class="card-id-row">
+              <span class="card-hotspot-id" id="cardHotspotId">Hotspot: HT-000124</span>
+              <span class="card-location" id="cardLocation">Pune, Maharashtra</span>
+            </div>
+            
+            <div class="card-metrics-grid">
+              <div class="card-metric-row">
+                <span class="metric-lbl">Risk</span>
+                <span class="card-risk-pill" id="cardRiskPill">🔴 CRITICAL 89/100</span>
+              </div>
+              <div class="card-metric-row">
+                <span class="metric-lbl">Confidence</span>
+                <span class="card-conf-pill" id="cardConfPill">🟢 HIGH 96%</span>
+              </div>
+              <div class="card-metric-row">
+                <span class="metric-lbl">Persistence</span>
+                <span class="card-persist-pill" id="cardPersistPill">🟣 PERSISTENT</span>
+              </div>
+            </div>
+
+            <div class="card-history-details">
+              <div class="history-item"><span id="cardDetectionsCount">12</span> detections</div>
+              <div class="history-item">First seen: <span id="cardFirstSeen">12 Jul 2026</span></div>
+              <div class="history-item">Last seen: <span id="cardLastSeen">10 Sep 2026</span></div>
+              <div class="history-item highlight">Factory distance: <span id="cardFactoryDist">230m</span></div>
+            </div>
+
+            <button class="btn-inspect-history" id="btnCardInspectDeepDive">
+              🔍 Inspect Full History & SHAP Explanation
+            </button>
+          </div>
+        </div>
+
+        <!-- Scientific Principle Bar -->
+        <div class="scientific-rule-bar">
+          <span class="rule-badge">SIH SCIENTIFIC STANDARD</span>
+          <span class="rule-statement">Three Independent Dimensions: Classification (What is it?) • Persistence (How often?) • Risk (How concerning?). A persistent industrial heat source is never automatically assumed to be an uncontrolled fire.</span>
+        </div>
+      </div>
+
+      <!-- Right: Multi-Satellite Event Inspector Sidebar -->
+      <aside class="sidebar-inspector" id="sidebarInspector">
+        <!-- Event Detail Header (Section 11 of Prompt) -->
+        <div class="event-summary-card" id="eventSummaryCard">
+          <div class="event-top-meta">
+            <span class="event-id-badge" id="detailEventId">SELECT AN EVENT ON MAP</span>
+            <span class="event-risk-badge risk-high" id="detailRiskBadge">--</span>
+          </div>
+
+          <!-- Prominent Classification Banner (Section 2 & 11 of Prompt) -->
+          <div class="prominent-classification-banner" id="prominentClassBanner">
+            <span class="class-icon" id="detailClassIcon">🔴</span>
+            <div class="class-texts">
+              <div class="class-main-title" id="detailClassTitle">POSSIBLE INDUSTRIAL THERMAL EVENT</div>
+              <div class="class-confidence-sub" id="detailClassConfidence">Classification confidence: 94%</div>
+            </div>
+          </div>
+
+          <h2 class="event-headline" id="detailHeadline">Click any satellite detection to inspect multi-source intelligence</h2>
+          <div class="event-facility-subtext" id="detailFacilitySub">Location / Facility Context</div>
+
+          <!-- Section 11 Six Key Metrics -->
+          <div class="event-dimensions-strip">
+            <div class="dim-pill">
+              <span class="dim-key">FIRMS Confidence:</span>
+              <span class="dim-val text-green" id="dimFirmsConf">HIGH</span>
+            </div>
+            <div class="dim-pill">
+              <span class="dim-key">Persistence:</span>
+              <span class="dim-val text-purple" id="dimPersistence">PERSISTENT</span>
+            </div>
+            <div class="dim-pill">
+              <span class="dim-key">Industrial Context:</span>
+              <span class="dim-val text-red" id="dimIndustrialContext">HIGH (240m)</span>
+            </div>
+            <div class="dim-pill">
+              <span class="dim-key">Satellite Agreement:</span>
+              <span class="dim-val text-green" id="dimSatAgreement">MULTI-SOURCE</span>
+            </div>
+          </div>
+
+          <!-- Action to open deep dive -->
+          <button class="btn-open-deepdive" id="btnSidebarOpenDeepDive">
+            📜 View Full Hotspot History & AI Explanation
+          </button>
+        </div>
+
+        <!-- DEDICATED 🇮🇳 INSAT EVIDENCE COMPONENT -->
+        <section class="evidence-card insat-evidence-card">
+          <div class="evidence-card-header">
+            <div class="header-title-group">
+              <span class="flag-icon">🇮🇳</span>
+              <h3 class="evidence-title">INSAT EVIDENCE</h3>
+            </div>
+            <span class="agency-source-pill isro">ISRO / MOSDAC</span>
+          </div>
+
+          <div class="insat-evidence-body" id="insatEvidenceBody">
+            <div class="insat-meta-grid">
+              <div class="insat-field">
+                <span class="field-label">Satellite:</span>
+                <span class="field-val highlight-isro" id="insatSatVal">INSAT-3DS</span>
+              </div>
+              <div class="insat-field">
+                <span class="field-label">Status:</span>
+                <span class="field-val status-detected" id="insatStatusVal">DETECTED</span>
+              </div>
+              <div class="insat-field">
+                <span class="field-label">Observation:</span>
+                <span class="field-val" id="insatObsVal">11 Sep 2026 00:00 IST</span>
+              </div>
+              <div class="insat-field">
+                <span class="field-label">Product:</span>
+                <span class="field-val code-font" id="insatProductVal">3SIMG_L2P_FIR</span>
+              </div>
+              <div class="insat-field">
+                <span class="field-label">Quality:</span>
+                <span class="field-val quality-good" id="insatQualityVal">GOOD</span>
+              </div>
+              <div class="insat-field">
+                <span class="field-label">Data Age:</span>
+                <span class="field-val" id="insatDataAgeVal">25m</span>
+              </div>
+              <div class="insat-field">
+                <span class="field-label">Brightness Temp:</span>
+                <span class="field-val" id="insatBtVal">352.4 K (MIR 3.9µm)</span>
+              </div>
+              <div class="insat-field">
+                <span class="field-label">Cloud Context:</span>
+                <span class="field-val" id="insatCloudVal">CLEAR (0% obscuration)</span>
+              </div>
+            </div>
+
+            <div class="insat-unavailable-box hidden" id="insatUnavailableBox">
+              <div class="unavail-title">Status: NO DATA AVAILABLE</div>
+              <div class="unavail-reason">Missing INSAT data is never converted into a negative detection.</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- UNIFIED SATELLITE EVIDENCE PANEL -->
+        <section class="evidence-card unified-evidence-panel">
+          <div class="evidence-card-header">
+            <h3 class="evidence-title">SATELLITE EVIDENCE</h3>
+            <span class="panel-subtitle">Multi-Agency Verification Status</span>
+          </div>
+          <div class="satellite-checklist-grid" id="satelliteChecklistGrid">
+            <!-- Rendered dynamically -->
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <!-- ===================================================================
+       VIEW 2: HOTSPOT REGISTRY & TABLE (SECTION 10 OF PROMPT)
+       =================================================================== -->
+  <main class="view-panel" id="view-hotspots">
+    <div class="panel-inner-container">
+      <div class="section-title-bar">
+        <div>
+          <h2 class="view-heading">📋 National Hotspot Registry</h2>
+          <p class="view-subheading">Comprehensive long-term memory of all detected thermal sources across India</p>
+        </div>
+        <div class="table-search-box">
+          <input type="text" id="inputTableSearch" placeholder="Filter by Hotspot ID, Facility, State..." class="search-input">
+        </div>
+      </div>
+
+      <!-- Hotspot Table (Section 10 of Prompt) -->
+      <div class="table-responsive-wrapper">
+        <table class="styled-hotspot-table" id="hotspotDataTable">
+          <thead>
+            <tr>
+              <th>Hotspot ID</th>
+              <th>Classification</th>
+              <th style="text-align:right;">Confidence</th>
+              <th>Persistence</th>
+              <th>Risk Severity</th>
+              <th style="text-align:right;">Avg FRP</th>
+              <th style="text-align:right;">Detections</th>
+              <th>Facility Distance</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="hotspotsTableBody">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================================================================
+       VIEW 3: PERSISTENT SOURCES DASHBOARD (/persistent-sources)
+       =================================================================== -->
+  <main class="view-panel" id="view-persistent">
+    <div class="panel-inner-container">
+      <div class="section-title-bar">
+        <div>
+          <h2 class="view-heading">🏭 Chronic Persistent Thermal Sources</h2>
+          <p class="view-subheading">Identified industrial flaring, smelting kilns, and chronic thermal emitters</p>
+        </div>
+        <div class="agency-source-pill persistent">Cadence: INSAT 15m + VIIRS 375m</div>
+      </div>
+
+      <!-- Persistent Sources KPIs -->
+      <div class="persistent-kpis-grid">
+        <div class="persistent-kpi-card">
+          <span class="pkpi-label">TOTAL PERSISTENT</span>
+          <span class="pkpi-value" id="pkpiTotal">--</span>
+          <span class="pkpi-sub">Observed over >60 days</span>
+        </div>
+        <div class="persistent-kpi-card">
+          <span class="pkpi-label">NEW PERSISTENT</span>
+          <span class="pkpi-value" id="pkpiNew">--</span>
+          <span class="pkpi-sub">Crossed recurrence threshold recently</span>
+        </div>
+        <div class="persistent-kpi-card">
+          <span class="pkpi-label">RECURRING SOURCES</span>
+          <span class="pkpi-value" id="pkpiRecurring">--</span>
+          <span class="pkpi-sub">Periodic seasonal or batch operations</span>
+        </div>
+        <div class="persistent-kpi-card">
+          <span class="pkpi-label">INDUSTRIAL ASSOCIATED</span>
+          <span class="pkpi-value" id="pkpiIndustrial">--</span>
+          <span class="pkpi-sub">Located &lt; 1,000m from registered plants</span>
+        </div>
+      </div>
+
+      <!-- Chronic Leaderboards -->
+      <div class="leaderboards-grid">
+        <div class="leaderboard-card">
+          <h3 class="leaderboard-title">🏆 Longest-Running Hotspots</h3>
+          <ul class="leaderboard-list" id="listLongestRunning">
+            <!-- Dynamically populated -->
+          </ul>
+        </div>
+        <div class="leaderboard-card">
+          <h3 class="leaderboard-title">📈 Most Frequently Detected</h3>
+          <ul class="leaderboard-list" id="listMostFrequent">
+            <!-- Dynamically populated -->
+          </ul>
+        </div>
+        <div class="leaderboard-card">
+          <h3 class="leaderboard-title">⚡ Highest FRP Radiative Power</h3>
+          <ul class="leaderboard-list" id="listHighestFrp">
+            <!-- Dynamically populated -->
+          </ul>
+        </div>
+      </div>
+
+      <!-- Candidates List -->
+      <h3 class="sub-section-title">All Tracked Persistent & Recurring Candidates</h3>
+      <div class="persistent-grid-cards" id="persistentGridCards">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================================================================
+       VIEW 4: ANALYTICS & DISTRIBUTION (SECTION 13 OF PROMPT)
+       =================================================================== -->
+  <main class="view-panel" id="view-analytics">
+    <div class="panel-inner-container">
+      <div class="section-title-bar">
+        <div>
+          <h2 class="view-heading">📊 Thermal Source Classification Analytics</h2>
+          <p class="view-subheading">Empirical breakdown of classifications, risk severity, and persistence cadences</p>
+        </div>
+      </div>
+
+      <div class="analytics-grid-layout">
+        <!-- SECTION 13: THERMAL SOURCE CLASSIFICATION DISTRIBUTION CHART -->
+        <div class="analytics-card chart-full-width">
+          <div class="analytics-card-header">
+            <h3 class="card-title">THERMAL SOURCE CLASSIFICATION DISTRIBUTION</h3>
+            <span class="source-tag">National Distribution (%)</span>
+          </div>
+          <p class="chart-desc">All 10 visual classification categories with their uniform color identifiers</p>
+          <div class="distribution-bars-container" id="classificationDistributionBars">
+            <!-- Rendered dynamically matching prompt colors -->
+          </div>
+        </div>
+
+        <!-- Risk Severity Matrix -->
+        <div class="analytics-card">
+          <div class="analytics-card-header">
+            <h3 class="card-title">RISK SEVERITY DISTRIBUTION</h3>
+            <span class="source-tag">Separate Dimension</span>
+          </div>
+          <div class="distribution-bars-container" id="riskDistributionBars">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Persistence Status Distribution -->
+        <div class="analytics-card">
+          <div class="analytics-card-header">
+            <h3 class="card-title">PERSISTENCE STATUS BREAKDOWN</h3>
+            <span class="source-tag">Temporal Dimension</span>
+          </div>
+          <div class="distribution-bars-container" id="persistenceDistributionBars">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================================================================
+       VIEW 5: SIH OFFICIAL REPORTS (SECTION 18 OF PROMPT)
+       =================================================================== -->
+  <main class="view-panel" id="view-reports">
+    <div class="panel-inner-container">
+      <div class="report-container" id="printableReport">
+        <div class="report-header">
+          <div class="report-titles">
+            <div class="report-agency-emblem">🇮🇳 ISRO // MOSDAC & SIH 2026</div>
+            <h2 class="report-main-title">NATIONAL THERMAL CLASSIFICATION & PERSISTENCE REPORT</h2>
+            <div class="report-timestamp">Generated: <span id="reportGenTime">11 Sep 2026 00:30 IST</span> • Emberlens Unified Intelligence</div>
+          </div>
+          <button class="btn-print-report" onclick="window.print()">🖨️ Print / Export PDF</button>
+        </div>
+
+        <!-- SECTION 18 OF PROMPT: REPORT LEGENDS -->
+        <div class="report-legends-row">
+          <!-- CLASSIFICATION LEGEND -->
+          <div class="report-legend-box">
+            <div class="report-legend-title">CLASSIFICATION LEGEND</div>
+            <div class="report-legend-list" id="reportClassLegendList">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- RISK LEGEND -->
+          <div class="report-legend-box">
+            <div class="report-legend-title">RISK LEGEND</div>
+            <div class="report-legend-list" id="reportRiskLegendList">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- PERSISTENCE LEGEND -->
+          <div class="report-legend-box">
+            <div class="report-legend-title">PERSISTENCE LEGEND</div>
+            <div class="report-legend-list" id="reportPersistLegendList">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Report Summary Findings -->
+        <div class="report-findings-section">
+          <h3 class="findings-title">Executive Summary & High-Priority Actions</h3>
+          <div class="findings-stats-row">
+            <div class="f-stat"><b id="repTotalHotspots">--</b> Total Hotspots Remembered</div>
+            <div class="f-stat"><b id="repCriticalCount" style="color:#DC2626;">--</b> Critical Risk Sites</div>
+            <div class="f-stat"><b id="repPrimaryCount" style="color:#EF4444;">--</b> Possible Industrial Thermal Events</div>
+          </div>
+          <div class="critical-audit-table-wrapper" id="reportTableContainer">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================================================================
+       VIEW 6: REAL-TIME NRT ALERTS (SECTION 14 OF PROMPT)
+       =================================================================== -->
+  <main class="view-panel" id="view-alerts">
+    <div class="panel-inner-container">
+      <div class="section-title-bar">
+        <div>
+          <h2 class="view-heading">🚨 Real-Time Multi-Satellite Alerts</h2>
+          <p class="view-subheading">Prioritizing risk severity while maintaining distinct classification categories</p>
+        </div>
+      </div>
+      <div class="alerts-stream-list" id="alertsStreamList">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================================================================
+       HOTSPOT DEEP DIVE MODAL (/hotspots/[id]) (SECTION 12 OF PROMPT)
+       =================================================================== -->
+  <div class="deepdive-modal-backdrop hidden" id="hotspotDeepDiveModal">
+    <div class="deepdive-modal-window">
+      <!-- Modal Header -->
+      <div class="deepdive-modal-header">
+        <div class="deepdive-header-left">
+          <span class="deepdive-hotspot-id" id="ddHotspotId">HT-000124</span>
+          <span class="badge-class" id="ddClassBadge">🔴 POSSIBLE INDUSTRIAL THERMAL EVENT</span>
+          <span class="badge-risk" id="ddRiskBadge">🔴 CRITICAL 89/100</span>
+          <span class="badge-persist" id="ddPersistBadge">🟣 PERSISTENT</span>
+        </div>
+        <button class="deepdive-close-btn" id="btnCloseDeepDive">✕</button>
+      </div>
+
+      <!-- Deep Dive Tabs -->
+      <div class="deepdive-tabs-nav">
+        <button class="dd-tab active" data-ddtab="dd-tab-overview">Overview & AI Explanation</button>
+        <button class="dd-tab" data-ddtab="dd-tab-timeline">Historical Activity & FRP Trend</button>
+        <button class="dd-tab" data-ddtab="dd-tab-spatial">Spatial Spread & Facility</button>
+        <button class="dd-tab" data-ddtab="dd-tab-satellite">Multi-Satellite Evidence</button>
+      </div>
+
+      <!-- Deep Dive Body -->
+      <div class="deepdive-modal-body">
+        <!-- TAB 1: OVERVIEW & AI EXPLANATION -->
+        <div class="dd-tab-content active" id="dd-tab-overview">
+          <div class="overview-grid">
+            <div class="overview-left-card">
+              <h4 class="card-subhead">Location & Temporal Cadence</h4>
+              <div class="meta-pairs">
+                <div class="pair"><span class="lbl">Facility / Cluster:</span> <b id="ddFacilityName">--</b></div>
+                <div class="pair"><span class="lbl">Facility Type:</span> <span id="ddFacilityType">--</span></div>
+                <div class="pair"><span class="lbl">State & District:</span> <span id="ddStateDist">--</span></div>
+                <div class="pair"><span class="lbl">Coordinates:</span> <code id="ddCoords">--</code></div>
+                <div class="pair"><span class="lbl">First Detected:</span> <span id="ddFirstSeen">--</span></div>
+                <div class="pair"><span class="lbl">Last Detected:</span> <span id="ddLastSeen">--</span></div>
+                <div class="pair"><span class="lbl">Observation Span:</span> <b id="ddSpanDays">-- days</b></div>
+                <div class="pair"><span class="lbl">Unique Days:</span> <b id="ddUniqueDays">-- days</b></div>
+                <div class="pair"><span class="lbl">Recurrence Rate:</span> <span id="ddRecurrenceRate">--</span></div>
+              </div>
+            </div>
+
+            <div class="overview-right-card">
+              <h4 class="card-subhead">AI Classification & Verification Checklist</h4>
+              <p class="checklist-intro">Conditions evaluated to confirm probabilistic classification:</p>
+              <div class="verification-checklist" id="ddChecklistContainer">
+                <!-- Dynamically populated: ✓ High-confidence FIRMS detections, etc. -->
+              </div>
+
+              <!-- SHAP Feature Importance Chart -->
+              <h4 class="card-subhead" style="margin-top: 16px;">SHAP Feature Attribution (Explainable AI)</h4>
+              <div class="shap-bars-container" id="ddShapContainer">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: HISTORICAL ACTIVITY & FRP TIMELINE -->
+        <div class="dd-tab-content" id="dd-tab-timeline">
+          <div class="timeline-header-strip">
+            <div>Average FRP: <b id="ddAvgFrp">-- MW</b></div>
+            <div>Maximum FRP: <b id="ddMaxFrp">-- MW</b></div>
+            <div>Total Detections: <b id="ddTotalDetections">--</b></div>
+          </div>
+
+          <!-- Chronological Observations Log Table -->
+          <h4 class="card-subhead">Historical Observation Log</h4>
+          <div class="obs-table-scroll">
+            <table class="obs-table">
+              <thead>
+                <tr>
+                  <th>Observation ID</th>
+                  <th>Timestamp</th>
+                  <th>Satellite</th>
+                  <th>Sensor</th>
+                  <th>Confidence</th>
+                  <th>FRP (MW)</th>
+                  <th>Brightness Temp</th>
+                </tr>
+              </thead>
+              <tbody id="ddObsTableBody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 3: SPATIAL SPREAD & PROXIMITY -->
+        <div class="dd-tab-content" id="dd-tab-spatial">
+          <div class="spatial-meta-grid">
+            <div class="spatial-card">
+              <span class="s-label">Cluster Center</span>
+              <span class="s-val" id="ddSpatialCenter">--</span>
+            </div>
+            <div class="spatial-card">
+              <span class="s-label">Cluster Radius</span>
+              <span class="s-val" id="ddSpatialRadius">220 m</span>
+            </div>
+            <div class="spatial-card">
+              <span class="s-label">Industrial Proximity</span>
+              <span class="s-val" id="ddSpatialDistance">180 m</span>
+            </div>
+          </div>
+          <div class="spatial-explanation-box">
+            <b>Spatial Consistency Assessment:</b>
+            <p>Hotspot observations demonstrate tight spatial clustering within 250m radius of industrial coordinates, ruling out widespread shifting biomass fire fronts and confirming a stationary industrial thermal source.</p>
+          </div>
+        </div>
+
+        <!-- TAB 4: SATELLITE EVIDENCE -->
+        <div class="dd-tab-content" id="dd-tab-satellite">
+          <h4 class="card-subhead">Multi-Satellite Platform Cross-Verification</h4>
+          <div class="satellite-breakdown-chips" id="ddSatelliteBreakdown">
+            <!-- Dynamically populated with counts for VIIRS NOAA-20, NOAA-21, SNPP, INSAT-3DS, INSAT-3DR -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>

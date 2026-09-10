@@ -1,0 +1,9 @@
+{
+  "mosdac_portal_url": "https://mosdac.gov.in",
+  "api_endpoint": "https://mosdac.gov.in/api/v1",
+  "username": "",
+  "api_key": "",
+  "preferred_satellite": "INSAT-3DS",
+  "auto_refresh_minutes": 15,
+  "allow_demo_mode": true
+}
