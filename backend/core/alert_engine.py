@@ -70,7 +70,7 @@ class AlertEngine:
                 rule_id="RULE_03",
                 name="Gas Flare Operational Monitoring",
                 description="Persistent thermal flaring signature active under normal parameters",
-                severity="MEDIUM",
+                severity="HIGH",
                 condition_fn=lambda event: (
                     event.scientific_classification == "Gas Flare" and
                     event.risk_level != "CRITICAL"

@@ -126,6 +126,7 @@ async function refreshAllData() {
     fetchHotspots(),
     fetchPersistentSources(),
     fetchAnalytics(),
+    fetchReport(),
     fetchAlerts(),
     fetchSatellitePanel()
   ]);
@@ -487,7 +488,6 @@ function renderHotspotsTable() {
           ${classDef.icon} ${h.classification}
         </div>
       </td>
-      <td style="text-align:right;">${h.average_confidence >= 80 ? '🟢' : '🟡'} ${h.average_confidence.toFixed(1)}%</td>
       <td>
         <div class="badge-table-persist" style="color:${persistDef.hex}; background:${persistDef.hex}20;">
           ${h.persistence_status}

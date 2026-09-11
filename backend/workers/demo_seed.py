@@ -29,11 +29,55 @@ def generate_demo_data(num_points=15):
     new_records = 0
     
     try:
+        from core.insat_provider import INDIAN_INDUSTRIAL_ANCHORS
         for i in range(num_points):
-            lat = round(random.uniform(min_lat, max_lat), 4)
-            lon = round(random.uniform(min_lon, max_lon), 4)
-            frp = round(random.uniform(5.0, 150.0), 1)
-            confidence = random.choice(["LOW", "NOMINAL", "HIGH"])
+            anchor = INDIAN_INDUSTRIAL_ANCHORS[i % len(INDIAN_INDUSTRIAL_ANCHORS)]
+            
+            # Add small random jitter (approx 20km) around the anchor
+            lat = round(anchor["lat"] + random.uniform(-0.15, 0.15), 4)
+            lon = round(anchor["lon"] + random.uniform(-0.15, 0.15), 4)
+            
+            # Manipulate frp and confidence based on index to cover all classifications
+            if i % 8 == 0:
+                frp = round(random.uniform(50.0, 150.0), 1)
+                confidence = "HIGH"
+                # For Critical Possible Industrial Thermal Event (high conf, near facility)
+                lat, lon = anchor["lat"] + random.uniform(-0.002, 0.002), anchor["lon"] + random.uniform(-0.002, 0.002)
+            elif i % 8 == 1:
+                frp = round(random.uniform(10.0, 40.0), 1)
+                confidence = "HIGH"
+                # Gas Flare (if anchor has flare expected)
+            elif i % 8 == 2:
+                frp = round(random.uniform(45.0, 80.0), 1)
+                confidence = "HIGH"
+                # Forest Fire (high FRP, far from facility)
+                lat, lon = anchor["lat"] + random.uniform(0.3, 0.6), anchor["lon"] + random.uniform(0.3, 0.6)
+            elif i % 8 == 3:
+                frp = round(random.uniform(26.0, 39.0), 1)
+                confidence = "NOMINAL"
+                # Agricultural Burn (medium FRP, far from facility)
+                lat, lon = anchor["lat"] + random.uniform(0.3, 0.6), anchor["lon"] + random.uniform(0.3, 0.6)
+            elif i % 8 == 4:
+                frp = round(random.uniform(10.0, 24.0), 1)
+                confidence = "HIGH"
+                # Waste Fire (low FRP, high confidence, far)
+                lat, lon = anchor["lat"] + random.uniform(0.3, 0.6), anchor["lon"] + random.uniform(0.3, 0.6)
+            elif i % 8 == 5:
+                frp = round(random.uniform(10.0, 50.0), 1)
+                confidence = "HIGH"
+                # Industrial Heat (high conf, < 1500m)
+                lat, lon = anchor["lat"] + random.uniform(-0.008, 0.008), anchor["lon"] + random.uniform(-0.008, 0.008)
+            elif i % 8 == 6:
+                frp = round(random.uniform(10.0, 50.0), 1)
+                confidence = "NOMINAL"
+                # Possible Industrial Fire (< 3000m, nominal conf)
+                lat, lon = anchor["lat"] + random.uniform(-0.02, 0.02), anchor["lon"] + random.uniform(-0.02, 0.02)
+            else:
+                frp = round(random.uniform(5.0, 20.0), 1)
+                confidence = "LOW"
+                # Other Thermal Source
+                lat, lon = anchor["lat"] + random.uniform(0.3, 0.6), anchor["lon"] + random.uniform(0.3, 0.6)
+
             satellite = random.choice(["NOAA-21", "NOAA-20", "SNPP"])
             
             source_record_id = f"DEMO_{satellite}_{now.strftime('%Y%m%d_%H%M%S')}_{lat:.4f}_{lon:.4f}_{i}"
@@ -73,9 +117,9 @@ def generate_demo_data(num_points=15):
                 db_rec = persistence_engine._model_to_db(hp)
                 db.add(db_rec)
                 
+            db.commit()
             new_records += 1
             
-        db.commit()
         logger.info(f"Successfully inserted {new_records} new demo records.")
         
     except Exception as e:
