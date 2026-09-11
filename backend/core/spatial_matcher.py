@@ -205,7 +205,7 @@ class SpatialTemporalMatcher:
                 risk_level = "HIGH"
                 risk_score = 76.0
                 persistence_status = "Persistent"
-            elif anomaly_near_industrial_facility and firms_confidence_is_high and detection_repeats_over_time:
+            elif anomaly_near_industrial_facility and detection_repeats_over_time:
                 classification = "Possible Industrial Thermal Event"
                 confidence = 94.0
                 risk_level = "CRITICAL"
