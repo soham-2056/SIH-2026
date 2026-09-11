@@ -10,7 +10,7 @@
  * - Deep-Dive AI Explanations & SHAP Feature Importance
  */
 
-const API_BASE = window.location.origin.includes('8000') ? window.location.origin : 'http://127.0.0.1:8000';
+const API_BASE = '';
 
 const state = {
   mode: 'DEMO',
@@ -126,7 +126,6 @@ async function refreshAllData() {
     fetchHotspots(),
     fetchPersistentSources(),
     fetchAnalytics(),
-    fetchReport(),
     fetchAlerts(),
     fetchSatellitePanel()
   ]);

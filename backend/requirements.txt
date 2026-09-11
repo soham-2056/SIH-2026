@@ -1,0 +1,8 @@
+apscheduler==3.10.1
+fastapi==0.100.0
+pandas==2.0.3
+pydantic==2.0.2
+python-dotenv==1.0.0
+requests==2.31.0
+SQLAlchemy==2.0.18
+uvicorn==0.22.0
