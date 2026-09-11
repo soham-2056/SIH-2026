@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://YOUR_RENDER_URL.onrender.com/api/$1"
+      "destination": "https://sih-2026-k55z.onrender.com/api/$1"
     },
     {
       "source": "/(.*)",
