@@ -81,6 +81,9 @@ def shutdown_event():
 
 
 
+from pydantic import BaseModel
+from services.chatbot_service import chatbot_service
+
 def get_pipeline_data():
     """Refreshes and caches pipeline data across providers."""
     insat_obs = insat_provider.fetch_observations()
@@ -89,6 +92,24 @@ def get_pipeline_data():
     persistent = persistence_engine.evaluate_persistent_sources(INDIAN_INDUSTRIAL_ANCHORS, insat_obs, viirs_obs)
     alerts = alert_engine.evaluate_events(fused)
     return insat_obs, viirs_obs, fused, persistent, alerts
+
+class ChatRequest(BaseModel):
+    message: str
+    conversation_id: str
+
+@app.post("/api/chat")
+def handle_chat(request: ChatRequest):
+    try:
+        pipeline_data = get_pipeline_data()
+        response = chatbot_service.handle_message(
+            message=request.message,
+            conversation_id=request.conversation_id,
+            pipeline_data=pipeline_data
+        )
+        return response
+    except Exception as e:
+        logging.error(f"Chatbot API Error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error in Chatbot Service")
 
 
 @app.get("/api/system/schema")

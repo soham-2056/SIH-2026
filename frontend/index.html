@@ -763,11 +763,39 @@
     </div>
   </div>
 
+  <!-- ==================== AI CHATBOT ==================== -->
+  <button class="ai-chat-button" id="aiChatBtn" title="Ask Thermal AI">
+    <span class="bot-icon">🤖</span>
+  </button>
+
+  <div class="ai-chat-popup" id="aiChatPopup">
+    <div class="chat-header">
+      <div class="header-info">
+        <span class="bot-icon">🤖</span>
+        <div class="header-text">
+          <h3>Thermal AI Assistant</h3>
+          <p>Satellite Intelligence Assistant <span class="status-dot">●</span> Online</p>
+        </div>
+      </div>
+      <button class="close-btn" id="closeChatBtn">&times;</button>
+    </div>
+    
+    <div class="chat-messages" id="chatMessages">
+      <!-- Welcome message and quick actions will be injected here -->
+    </div>
+    
+    <div class="chat-input-area">
+      <textarea id="chatInput" placeholder="Ask about hotspots, risk, alerts..." rows="1"></textarea>
+      <button id="sendChatBtn" disabled>&#10148;</button>
+    </div>
+  </div>
+
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <!-- Application Logic -->
   <script src="app.js"></script>
+  <script src="chatbot.js"></script>
 </body>
 
 </html>
